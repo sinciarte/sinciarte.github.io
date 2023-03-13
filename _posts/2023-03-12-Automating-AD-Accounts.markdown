@@ -7,11 +7,14 @@ categories: Programming Design
 
 # Table of contents
 
+THIS IS A ROUGH DRAFT, POST HAS NOT BEEN FINISHED.
+
 - [Identifying the problem](#Identifying-problem)
 - [Defining the principles behind a need for scripting and automation](#defining-principles)
 - [Formatting the data](#formatting-data)
 - [Reading the data](#reading-data)
 -    [A look into cmdlets and their purpose](#defining-cmdlets)
+-    [Read-Csv and implementing it into our program](#defining-read-csv)
 
 ## Identifying the problem {#identifying-problem}
 
@@ -69,4 +72,19 @@ From now on, we will be moving onto **PowerShell**. Powershell is a scripting la
 
 To first understand how we'll write this script, let's take a look at **cmdlets**
 
+A cmdlet is the PowerShell version of a command and they are built into every PowerShell version. For example, Write-Host is a simple command. All it does is print something to the screen.
+
+Cmdlets are written in the same format: **Verb-Target**
+
+In the case of Write-Host, it simply **writes** to the "host" which in this case is the terminal window that's currently open, if you were to launch it in a new powershell window. If you wanted to take a look at all available powershell commands, you can use **Get-Command**
+
+![Get-Command output](../images/Get-Command-Output.png)
+
+Also, you can get information on a specific command by using **Get-Help** or **help** for short.
+
+![Get-Help output](../images/Get-Help-Output.png)
+
+These two commands will be the basis behind most of our research within powershell itself. Alternatively, you can access [Microsoft documentation](https://learn.microsoft.com/en-us/powershell/) as another source of information.
+
+### Read-Csv and implementing it into our program {#defining-read-csv}
 
