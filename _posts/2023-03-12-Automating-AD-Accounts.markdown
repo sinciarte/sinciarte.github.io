@@ -5,13 +5,23 @@ date: 2023-03-13 07:55:00 -0000
 categories: Programming Design
 ---
 
+# Table of contents
+
+[Identifying the problem](#Identifying-problem)
+[Defining the principles behind a need for scripting and automation](#defining-principles)
+[Formatting the data](#formatting-data)
+[Reading the data](#reading-data)
+- [### A look into cmdlets and their purpose](#defining-cmdlets)
+
+## Identifying the problem {#identifying-problem}
+
 Imagine this: you're an admin for a small office, and one of your common tasks is maintaining and creating user accounts.
 
 You may receive an account creation a week, maybe once a month, and a few password resets here and there. This is not an issue, you'll be able to perform your daily tasks and continue your day. Sure, there has been a lot of setup work to do, but these tasks do not take much of your time so they're essentially just like taking a shower or brushing your teeth; You don't really think about it, you just do it and move on.
 
 One day, you get a job at a large corporation, and now you get anywhere between 10-30 account creations, on top of having a ton more tasks to keep track of. What do you do? Simply get the computer to do your job.
 
-## Defining the principles behind a need for scripting and automation
+## Defining the principles behind a need for scripting and automation {#defining-principles}
 
 For this example, we're going to establish a common procedure, and it looks like this:
 
@@ -43,7 +53,7 @@ Let's also establish a plan of action to implement a script.
 4. Enter the data into Active Directory
 5. Create an email and send it to the manager.
 
-## Formatting the data
+## Formatting the data {#formatting-data}
 
 We need a format that is easy for the user to understand, but that would still allow us to process the data quickly. In this instance, we're going to make use of Excel. We will create a template and send it to HR as a form they would fill out whenever they have new hires, and it will look like this:
 
@@ -51,12 +61,12 @@ Employee ID | First Name | Last Name | Phone Number | Job Description | Manager
 
 We will make sure this file is in ==CSV== format in order to simplify our lives. 
 
-## Reading the data
+## Reading the data {#reading-data}
 
 From now on, we will be moving onto **PowerShell**. Powershell is a scripting language created by Microsoft that is very powerful and can automate most of, if not all of your daily tasks as an admin. We will also discuss the philosophy behind designing a program like this, which is the entire aim of this post.
 
-### A look into cmdlets and their purpose
+### A look into cmdlets and their purpose {#defining-cmdlets}
 
-To first understand how we'll write this script, let's take a look at ==cmdlets==
+To first understand how we'll write this script, let's take a look at **cmdlets**
 
 
