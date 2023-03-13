@@ -1,1 +1,11 @@
-# Landing PageThis site is currently under construction## About MeI'm an aspiring developer looking to expand my skillset
+---
+layout: home
+---
+
+<ul>
+  {% for post in site.posts %}
+    <li>
+      <a href="{{ post.url }}">{{ post.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
