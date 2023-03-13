@@ -59,7 +59,7 @@ We need a format that is easy for the user to understand, but that would still a
 
 Employee ID | First Name | Last Name | Phone Number | Job Description | Manager
 
-We will make sure this file is in ==CSV== format in order to simplify our lives. 
+We will make sure this file is in **CSV** format in order to simplify our lives. 
 
 ## Reading the data {#reading-data}
 
