@@ -12,9 +12,10 @@ THIS IS A ROUGH DRAFT, POST HAS NOT BEEN FINISHED.
 - [Identifying the problem](#Identifying-problem)
 - [Defining the principles behind a need for scripting and automation](#defining-principles)
 - [Formatting the data](#formatting-data)
+- [Program Design](#defining-philosophy)
+- [Recording our actions](#logging-function)
 - [Reading the data](#reading-data)
 -    [A look into cmdlets and their purpose](#defining-cmdlets)
--    [Read-Csv and implementing it into our program](#defining-read-csv)
 
 ## Identifying the problem {#identifying-problem}
 
@@ -23,6 +24,8 @@ Imagine this: you're an admin for a small office, and one of your common tasks i
 You may receive an account creation a week, maybe once a month, and a few password resets here and there. This is not an issue, you'll be able to perform your daily tasks and continue your day. Sure, there has been a lot of setup work to do, but these tasks do not take much of your time so they're essentially just like taking a shower or brushing your teeth; You don't really think about it, you just do it and move on.
 
 One day, you get a job at a large corporation, and now you get anywhere between 10-30 account creations, on top of having a ton more tasks to keep track of. What do you do? Simply get the computer to do your job.
+
+**This post is not intended to show you instructions on how to solve this specific problem, but instead how to work through problems, as it is a very valuable skill.**
 
 ## Defining the principles behind a need for scripting and automation {#defining-principles}
 
@@ -64,6 +67,88 @@ Employee ID | First Name | Last Name | Phone Number | Job Description | Manager
 
 We will make sure this file is in **CSV** format in order to simplify our lives. 
 
+## How can we design a working program? {#defining-philosophy}
+
+To avoid future headaches, we need to first draft out a plan of action for our script. The core concept is that we want to take some data, pass it through a number of functions, then return a desired value.
+
+For our account creation script, we want to pass account information, and get the account, the ticket number, and a pre-formatted email as a result.
+
+Anything that is going to be re-used at some later point in our code we want to turn into a function, and we want to define these functions early on, even if we don't know the implementation aspects just yet.
+
+In this case, we'd like the following:
+
+- A function that records any actions performed by the program, as well as any errors and other useful information.
+- A function that reads and returns the data we want, in the format we want. This function will need to take a CSV file and convert it to a format that we can read in code. We'll call this one Read-AccountForm
+- A function that creates the ticket in our ITSM portal. 
+- A function that creates the account in Active Directory with the data that Read-AccountForm returns
+- A function that creates the formatted email and sends it. 
+
+## Recording our actions {#logging-function}
+
+If you've had any software related problem, at some point you've encountered an error, sometimes with a lot of detail. We're going to need that error, as well as what was happening within the program when the error occurred. This will be recorded in a log file. PowerShell does not have integrated logging capabilities, outside of the windows event log, but we want a simple to read file that we can open quickly, so we will not be using the event log.
+
+Why do we need to have an account creation script have logs? You might ask, however, this is a core design philosophy that will help you out in the long run. If your program is going to be used more than once, you're going to want to have the ability to troubleshoot, especially if it will be used by other users. And while the actions that the script executes in the other programs (ITSM, Outlook, Active Directory) are logged, we still want to have a quick glance at what OUR program is doing
+
+So let's design this logging function!
+
+We will need to gather the Date and time of execution, the type of information displayed (to distinguish info messages over potential errors) as well as a message
+
+```powershell
+
+<#
+
+Writes to a log file in the current filepath called ADCreationLogs.
+Each line in this file will contain the following format:
+
+DATE TIME   [ACTION]     MESSAGE
+
+ACTION meaning the following values: ERROR, WARNING, INFO, SUCCESS
+
+
+#>
+
+Function Write-Logfile {
+    Param(
+    [Parameter(mandatory=$true)]
+    [string]
+    $Type,
+    [Parameter(mandatory=$true)]
+    [string]
+    $Message
+    )
+
+    $LogFile = "$currentloc\ADCreationLogs.txt"
+    $Date = Get-Date -Format "yyyy-MM-dd"
+    $Time = Get-Date -Format "HH:mm:ss"
+
+    if (!(Test-Path "$currentloc\ADCreationLogs.txt")) {
+        New-Item -path $currentloc -name "ADCreationLogs.txt" -type "file"
+        Write-Host "Created ADCreationLogs file"
+    } 
+    else {
+        Write-Output "$($Date) $($Time)    [$Type]    $Message" | Out-File $LogFile -Append
+        Write-Host "$($Date) $($Time)    [$Type]    $Message"
+    }
+
+    
+}
+
+```
+
+Now, this does it for any information we want to specify. We can now specify `Write-Logfile $type $message` in order to record something in our log file.
+
+For instance, once the account is created, we want to provide a detail of that in the log. We could achieve this by using our function from earlier:
+
+`Write-Logfile -type "INFO" -message "Created AD account for employee named $name under id $employeeID"`
+
+But we're still missing the errors and other output sent to the console. To capture those, we can use [Start-Transcript](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.3) and [Stop-Transcript](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/stop-transcript?view=powershell-7.3)
+
+At the beginning of our code, we would execute `Start-Transcript -Path "$currentpath\nameoflog.txt" -Append`
+
+The -Append option simply signals that we want to add to the file, as opposed to creating a new one. This is useful if you'd like to have a single log file. In our case, we want to be able to filter a single file, as opposed to different ones. Let's say we're told by HR that one of the accounts was created under the wrong name. We can simply use a find function in Notepad++ with the single file open, and find out when it was created as well as with what data. This will help us troubleshoot and identify if it was our error, or user error.
+
+Then, when program execution stops, we call `Stop-Transcript`
+
 ## Reading the data {#reading-data}
 
 From now on, we will be moving onto **PowerShell**. Powershell is a scripting language created by Microsoft that is very powerful and can automate most of, if not all of your daily tasks as an admin. We will also discuss the philosophy behind designing a program like this, which is the entire aim of this post.
@@ -85,6 +170,4 @@ Also, you can get information on a specific command by using **Get-Help** or **h
 ![Get-Help output](images/Get-Help-Output.png)
 
 These two commands will be the basis behind most of our research within powershell itself. Alternatively, you can access [Microsoft documentation](https://learn.microsoft.com/en-us/powershell/) as another source of information.
-
-### Read-Csv and implementing it into our program {#defining-read-csv}
 
