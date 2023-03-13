@@ -7,11 +7,11 @@ categories: Programming Design
 
 # Table of contents
 
-[Identifying the problem](#Identifying-problem)
-[Defining the principles behind a need for scripting and automation](#defining-principles)
-[Formatting the data](#formatting-data)
-[Reading the data](#reading-data)
-- [### A look into cmdlets and their purpose](#defining-cmdlets)
+- [Identifying the problem](#Identifying-problem)
+- [Defining the principles behind a need for scripting and automation](#defining-principles)
+- [Formatting the data](#formatting-data)
+- [Reading the data](#reading-data)
+- - [### A look into cmdlets and their purpose](#defining-cmdlets)
 
 ## Identifying the problem {#identifying-problem}
 
