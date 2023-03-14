@@ -2,7 +2,7 @@
 layout: post
 title: "Automating account tasks within Active Directory"
 date: 2023-03-13 07:55:00 -0000
-categories: Programming Design
+categories: Scripting
 ---
 
 # Table of contents
@@ -16,6 +16,9 @@ THIS IS A ROUGH DRAFT, POST HAS NOT BEEN FINISHED.
 - [Recording our actions](#logging-function)
 - [Reading the data](#reading-data)
 -    [A look into cmdlets and their purpose](#defining-cmdlets)
+-    [Using Import-CSV](#defining-import-csv)
+-    [Processing the data](#processing-data)
+-    [Avoiding error states](#avoiding-errors)
 
 ## Identifying the problem {#identifying-problem}
 
@@ -170,4 +173,150 @@ Also, you can get information on a specific command by using **Get-Help** or **h
 ![Get-Help output](images/Get-Help-Output.png)
 
 These two commands will be the basis behind most of our research within powershell itself. Alternatively, you can access [Microsoft documentation](https://learn.microsoft.com/en-us/powershell/) as another source of information.
+
+## Import-CSV and its purpose {#defining-import-csv}
+
+The first important concept to get down is to test. Test everything, take a deeper look at how data is returned and what you can do with the data.
+For this purpose, we're going to create a basic CSV file containing the following data:
+
+ID   | First Name |	Last Name |	Phone Number |	Job Description     |	Manager Email
+1000 |	John	  | Johnson   |	123456       |	People's Manager	| info@fakemail.com
+1001 |	Bob	      |	Boots     | 7891011      |	Squirrel Counter	| info@fakemail.com
+1002 |	Dr        |	Phil      | 12131415     |	Gaming Specialist	| info@fakemail.com
+
+If we want to read and store this data, we may use `Import-CSV` to convert the CSV file contents into a powershell variable. Powershell variables have their own unique properties if they're stored as an object. In this case, we're simply converting the contents of the CSV file into a powershell object of type System.Array
+
+What this means is that we have a very easy to access table with columns and rows. We can loop through each row and find every property to use for our ticket, account and email creation.
+
+Running `Import-CSV .\accounts.csv` (Note: .\ just means current directory) will give us the following output:
+
+```
+ID              : 1000
+First Name      : John
+Last Name       : Johnson
+Phone Number    : 123456
+Job Description : People's Manager
+Manager Email   : info@fakemail.com
+
+ID              : 1001
+First Name      : Bob
+Last Name       : Boots
+Phone Number    : 7891011
+Job Description : Squirrel Counter
+Manager Email   : info@fakemail.com
+
+ID              : 1002
+First Name      : Dr
+Last Name       : Phil
+Phone Number    : 12131415
+Job Description : Gaming Specialist
+Manager Email   : info@fakemail.com
+```
+
+Alright, that's perfect. Now that we know we can get the data in a readable format, let's think about design for a second.
+
+We're going to be reading (and storing) many CSV files over the course of our week. So we need to define a few things to make adjustments easy to make. Ideally, we'd like to not overengineer the program, while at the same time having enough complexity to scale should the need arise (For example, we have to start populating the Description field).
+
+Let's go over a potential approach, do keep in mind there's many different ways to approach this problem, this is just one of them
+
+## Processing the data {#processing-data}
+
+We can create a for loop to go through each row in the file, then, we would use the specific sets of data to populate AD, our ITSM portal, and the email for the manager. This approach seems to be the simplest, let's evaluate how we would implement it.
+
+If we use `Get-Member -InputObject $file` we will be able to see that there is a method in the powershell object called `Get` since it is an [array](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays?view=powershell-7.3). Looks like this method takes in an `int` which is used to access each member of the array. We can confirm this by calling `$file.get(0)` or alternatively `$file[0]`, either of which will get the first object in the array.
+
+Since the output of `$file[0]` contains ONLY John's information, we can assume the first member of that array would give us the first row. Now we need to find out how this data is stored so we can access it. We will once again use `Get-Member` and the output for that will be:
+
+```
+Get-Member -InputObject $file[0]
+
+   TypeName: System.Management.Automation.PSCustomObject
+
+Name            MemberType   Definition
+----            ----------   ----------
+Equals          Method       bool Equals(System.Object obj)
+GetHashCode     Method       int GetHashCode()
+GetType         Method       type GetType()
+ToString        Method       string ToString()
+First Name      NoteProperty string First Name=John
+ID              NoteProperty string ID=1000
+Job Description NoteProperty string Job Description=People's Manager
+Last Name       NoteProperty string Last Name=Johnson
+Manager Email   NoteProperty string Manager Email=info@fakemail.com
+Phone Number    NoteProperty string Phone Number=123456
+```
+
+Looks like `Import-CSV` imports each individual row as a `PSCustomObject` containing properties corresponding to the column names. We will be able to access each property using `Select-Object`. For example, `$file[0] | Select-Object -ExpandProperty ID` would give us `1000` which is the number we want. Since we'll be accesing the same information multiple times, we want to assign each property of the current row into a variable. 
+
+```powershell
+
+$file = Import-CSV .\accounts.csv
+
+ForEach($row in $file) {
+
+    #If we ever need to add another property to the CSV, we can add it here.
+    $columnNames = @(
+    'ID',
+    'First Name',
+    'Last Name',
+    'Job Description',
+    'Phone Number', 
+    'Manager Email'
+    )
+    
+    $values = @()
+
+    #We want to loop through each property within $columnNames, and assign the values, in order, to the array $values
+
+    ForEach($val in $columnNames) {$values += $row | Select-Object -ExpandProperty $val}
+
+    #Because of our previous steps! We can actually assign ALL values, in order, directly from the array. We would also need to add a variable here if we were to add one to
+    #$columnNames
+
+    $ID, $FirstName, $LastName, $JobDescription, $PhoneNumber, $ManagerEmail = $values
+
+    #Now we can add the logic for the rest of our program, using the variable names
+    
+    #We could also just use row.'FirstName'
+
+    New-ADUser -EmployeeID $ID -FirstName $FirstName # .....
+
+    #After this, we would create each ticket. Alternatively, we could write the ticket outside of the loop with the entire contents of the CSV, if we wanted one big ticket.
+    
+}
+```
+
+The problem with the above code, is that when adding a new property, you would have to change both `$columnNames` and the variable assignment from `$values`
+However, it would work as expected and as we need.
+
+Otherwise, you could forgo variable assignments, and just access each property individually. This is a lot less code, and would be more straightforward.
+
+
+```powershell
+
+ForEach($row in $file) {
+
+    #In this case, we would just do the following
+
+    #Example: New-ADUser -EmployeeID $row.'ID' -FirstName $row.'First Name'
+
+}
+
+```
+
+It would also be much easier to implement any changes to the CSV file into our code. We would simply access the new property as needed.
+
+## Avoiding error states {#avoiding-errors}
+
+At this point, what we have are pieces. They're individual problems that we've identified from breaking down a big task into small ones. Once we start putting them together, we need to figure out how to make sure that the pieces fit together.
+
+In this case, we need to properly account for the most failstates possible. One such example would be an invalid phone number. Let's say our company only allows phone numbers in the US, now we need to verify that each phone number is in the correct format before pushing the account through. That way, we don't have to individually check each line of the CSV, we would just glance at it to make sure we've got the correct column names.
+
+Since our error message would be shown in the log file, we can address the lack of information on a per-account basis. We would just skip the current item in the for loop if any of our checks fail.
+
+## Conclusions
+
+So, we've got a working design. Now it's time to implement it. From now on, our friend Google can assist with each individual concept. With a solid plan of action, executing every small task should be trivial, since we will be able to search for the information on how to do it.
+
+...
 
